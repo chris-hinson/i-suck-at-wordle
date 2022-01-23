@@ -60,7 +60,7 @@ fn main() {
     let mut rng = thread_rng();
     let pick = rng.gen_range(0..solutions.len());
     let sol = &solutions[pick];
-    println!("word is {}", sol.iter().collect::<String>());
+    //println!("word is {}", sol.iter().collect::<String>());
 
     //we want to repeat our guess process up to 6 times
     let mut in_place: Vec<(char, usize)> = Vec::new();
