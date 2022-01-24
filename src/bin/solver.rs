@@ -171,7 +171,7 @@ fn main() {
                 let old_word = word.clone();
                 word.sort();
                 word.dedup();
-                (s', 6665), ('e', 6662), ('a', 5990), ('o', 4438), ('r', 4158), ('
+                (
                     old_word.iter().collect::<String>(),
                     word.iter().map(|c| raw_scoring.get(c).unwrap()).sum(),
                 )
