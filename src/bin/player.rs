@@ -3,6 +3,7 @@
 use rand::{thread_rng, Rng};
 use std::fs;
 use std::io;
+use std::collections::HashMap;
 
 const ANSI_BLACK: &str = "\u{001b}[30m";
 const ANSI_RED: &str = "\u{001b}[31m";
@@ -54,19 +55,35 @@ fn main() {
         solutions[0].iter().collect::<String>()
     );*/
 
-    println!("-------------------------welcom to wordle-------------------------");
+    println!("-------------------------welcome to wordle-------------------------");
 
     //lets pick our word
     let mut rng = thread_rng();
     let pick = rng.gen_range(0..solutions.len());
     let sol = &solutions[pick];
     //println!("word is {}", sol.iter().collect::<String>());
+    
+    //create hashmap with characters in sol as keys and char frequencies as values
+    let mut freqs = HashMap::new();
+    for i in 0..sol.len() {
+        //if the map contains the char already, increment value
+        //else add char with freq of 1
+        if freqs.contains_key(&sol[i]) {
+            *freqs.get_mut(&sol[i]).unwrap() += 1;
+        }
+        else {
+            freqs.insert(sol[i], 1);
+        }
+    }
 
     //we want to repeat our guess process up to 6 times
     let mut in_place: Vec<(char, usize)> = Vec::new();
     let mut out_of_place: Vec<char> = Vec::new();
     let mut eliminated: Vec<char> = Vec::new();
+    let mut colors: Vec<&str> = Vec::new();
     for i in 0..6 {
+        //keep track of frequency of solution character in this specific guess 
+        let mut curr_freqs = freqs.clone();
         //get the user's guess for this turn and make sure its both 5 letters long and a valid word
         println!(
             "it is turn {}{i}{} please enter a guess",
@@ -96,33 +113,47 @@ fn main() {
         }
         //process the guess
         for (index, char) in guess.chars().into_iter().enumerate() {
-            let mut color = ANSI_WHITE;
+            colors.insert(index, ANSI_WHITE);
             //the user's guess at this index is not in the answer at ALL
             if !sol.contains(&char) {
-                color = ANSI_RED;
+                colors.insert(index, ANSI_RED);
                 if !eliminated.contains(&char) {
                     eliminated.push(char);
                 }
+            //guess was in correct position
+            } else if sol[index].eq(&char) {
+                *curr_freqs.get_mut(&char).unwrap() -= 1;
+                in_place.push((char, index));  
+                colors.insert(index, ANSI_GREEN);
+            //in the word, just wrong position
             } else {
-                //the user guessed correctly at this index
-                if sol[index].eq(&char) {
-                    color = ANSI_GREEN;
-                    //if the value is already in out of place, remove it before we put it in in place
-                    out_of_place.clone().iter().enumerate().for_each(|(i, v)| {
-                        if v.eq(&char) {
-                            out_of_place.remove(i);
-                        }
-                    });
-                    in_place.push((char, index));
-                //the user guessed a character that is in our word
-                } else {
-                    color = ANSI_YELLOW;
-                    if !out_of_place.contains(&char) {
-                        out_of_place.push(char);
-                    }
+                out_of_place.push(char);
+            }
+        }
+        //keep track of which out of place characters have been used
+        let mut curr_out_of_place = out_of_place.clone();
+        //iterate over the guess again and determine if white characters should be made yellow
+        for (index, char) in guess.chars().into_iter().enumerate() {
+            if colors[index].eq(ANSI_WHITE) && curr_out_of_place.contains(&char) { 
+                if *curr_freqs.get(&char).unwrap() > 0 {
+                    //remove current color at that index, insert new one
+                    colors.remove(index);
+                    colors.insert(index, ANSI_YELLOW);
+                    *curr_freqs.get_mut(&char).unwrap() -= 1;
+                    let index = curr_out_of_place.iter().position(|x| *x == char).unwrap();
+                    curr_out_of_place.remove(index);
                 }
             }
-            print!("{}{}{}", color, char, ANSI_RESET);
+        }
+        for (index, char) in guess.chars().into_iter().enumerate() {
+            print!("{}{}{}", colors[index], char, ANSI_RESET);
+        }
+        out_of_place = Vec::new();
+        //if the character is yellow, put it in out_of_place
+        for (index, char) in guess.chars().into_iter().enumerate() {
+            if colors[index] == ANSI_YELLOW {
+                out_of_place.push(char);
+            }
         }
         println!("");
         //win check
